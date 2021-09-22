@@ -1,0 +1,12 @@
+[submodule "ultimate-makefile"]
+	path = cpp/ultimate-makefile
+	url = https://github.com/tamasseller/ultimate-makefile
+[submodule "pet"]
+	path = cpp/pet
+	url = https://github.com/tamasseller/pet
+[submodule "cpp/pet"]
+	path = cpp/pet
+	url = https://github.com/tamasseller/pet
+[submodule "cpp/ultimate-makefile"]
+	path = cpp/ultimate-makefile
+	url = https://github.com/tamasseller/ultimate-makefile

@@ -1,0 +1,48 @@
+/*
+ * RPC interoperability test suite.
+ */
+$interopTest;
+
+/* A character string */
+str = [i1];
+
+/* Send an exact reply of the argument */
+echo(/* The value to be echoed */ v: str): str;
+
+/* Allow remote UUT to exit (must be called before waiting unlocking) */ 
+unlock(
+	/* Gate flag: operation is done only if this is true */
+	doIt: bool
+);
+
+/* Streaming random number generator */
+stream
+<
+	/* Initialize the PRNG with the given values*/
+	open(
+		/* The initial state of the generator */
+		initial: u1, 
+		
+		/* The modulus used in the state update operation */
+		modulus: u1
+	) : [i1];
+	
+	/* Generate some random numbers and return them via the takeResult callback */
+	!generate(
+		/* The number of items to be generated */
+		nData: u4
+	);
+	
+	/* Callback method used for retrieving data */
+	@takeResult(
+		/* The generated data */
+		result: [u2]
+	);
+	
+	openDefault();
+>;
+
+instantClose
+<
+	closeMe(instant: bool): [i1];
+>;
