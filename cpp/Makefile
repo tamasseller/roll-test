@@ -35,5 +35,6 @@ LD=$(CXX)
 
 COVROOT = ..
 
+include ../../cpp/mod.mk
 include pet/mod.mk
 include ultimate-makefile/Makefile.ultimate

@@ -21,10 +21,14 @@ LIBS += pthread
 COVROOT = ..
 
 include ../ultimate-makefile/Makefile.ultimate
-
-RPCTOOL = ../../tool/rpc-tool
+include ../../../cpp/mod.mk
 
 $(abspath InteropTest.h): $(abspath Contract.gen.h)
+
+RPCTOOL = $(shell command -v roll-contract-tool 2>/dev/null)
+ifeq ($(RPCTOOL),)
+$(error "you need to have roll-contract-tool installed for building this")
+endif
 
 $(abspath Contract.gen.h): contract.rcd
 	$(RPCTOOL) codegen -s -c -l c++ -i $< -o $@
