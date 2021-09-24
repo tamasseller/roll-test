@@ -2,6 +2,7 @@
 
 #include "RpcStlArray.h"
 #include "RpcStlList.h"
+#include "RpcStlAdapters.h"
 #include "RpcFdStreamAdapter.h"
 
 #include "Contract.gen.h"
@@ -9,7 +10,7 @@
 #include "Tcp.h"
 #include "Common.h"
 
-struct Service: InteropTestContract::ServerProxy<Service, rpc::FdStreamAdapter>
+struct Service: InteropTestContract::ServerProxy<Service, rpc::StlEndpoint<rpc::FdStreamAdapter>>
 {
 	using Service::ServerProxy::ServerProxy;
 	std::mutex m;
