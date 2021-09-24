@@ -5,7 +5,11 @@ SOURCES += InteropTest.cpp
 SOURCES += InteropListener.cpp
 SOURCES += Tcp.cpp
 
+GENDIR = .g
+CLEAN_EXTRA += $(GENDIR) 
+
 INCLUDE_DIRS += ..
+INCLUDE_DIRS += $(GENDIR)
 
 CXXFLAGS += -O0 -g3
 CXXFLAGS += --std=c++17
@@ -20,15 +24,17 @@ LIBS += pthread
 
 COVROOT = ..
 
-include ../ultimate-makefile/Makefile.ultimate
-include ../../../cpp/mod.mk
-
-$(abspath InteropTest.h): $(abspath Contract.gen.h)
+%.cpp: $(abspath $(GENDIR)/Contract.gen.h) ;
 
 RPCTOOL = $(shell command -v roll-contract-tool 2>/dev/null)
 ifeq ($(RPCTOOL),)
 $(error "you need to have roll-contract-tool installed for building this")
 endif
 
-$(abspath Contract.gen.h): contract.rcd
-	$(RPCTOOL) codegen -s -c -l c++ -i $< -o $@
+$(abspath $(GENDIR)/Contract.gen.h): contract.rcd $(MAKEFILE_LIST)
+	@$(call print_extra_step,codegen $<)
+	$Smkdir -p $(dir $@)
+	$S$(RPCTOOL) codegen -s -c -l c++ -i $< -o $@
+
+include ../ultimate-makefile/Makefile.ultimate
+include ../../../cpp/mod.mk
