@@ -15,6 +15,8 @@
 #include <list>
 #include <sstream>
 
+static constexpr const char hello[] = {'h', 'e', 'l', 'l', 'o'};
+
 struct Uut:
 		rpc::Endpoint<
 			MockSmartPointer,
@@ -67,7 +69,7 @@ TEST(Endpoint, Hello)
         n++;
     });
 
-    CHECK(nullptr == uut.call(cb, "hello"_nt));
+    CHECK(nullptr == uut.call(cb, hello));
     executeLoopback(uut);
     CHECK(n == 1);
 }
@@ -159,7 +161,7 @@ TEST(Endpoint, ExecuteRemoteWithCallback)
     CHECK(nullptr == uut.provide(sym, [](Uut::Endpoint& uut, const rpc::MethodHandle &id, uint32_t x, rpc::Call<std::string> callback)
 	{
         for(auto i = 0u; i < x; i++)
-            CHECK(nullptr == uut.call(callback, "hello"_nt));
+            CHECK(nullptr == uut.call(callback, hello));
     }));
 
     bool done = false;

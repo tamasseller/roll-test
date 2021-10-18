@@ -28,7 +28,7 @@ TEST_GROUP(SerDes), rpc::CallIdTestAccessor
         auto a = stream.access();
         CHECK(rpc::serialize(a, std::forward<C>(c)...));
         CHECK(!a.write('\0'));
-        return std::move(stream);
+        return stream;
     }
 
     template<class... C>

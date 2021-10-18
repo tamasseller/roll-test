@@ -9,13 +9,14 @@
 #include "1test/Test.h"
 
 #include <sstream>
+#include <cstring>
 
 TEST_GROUP(SignatureGenerator) 
 {
     template<class... T>
     std::string sgn() 
     {
-        static constexpr auto ret = rpc::writeSignature<T...>(""_ctstr);
+    	static constexpr auto ret = rpc::writeSignature<T...>(""_ctstr);
 
         auto alt = rpc::writeSignature<T...>("alt"_ctstr);
         CHECK((const char*)ret != (const char*)alt);

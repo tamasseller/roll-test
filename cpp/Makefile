@@ -14,7 +14,7 @@ INCLUDE_DIRS += .
 INCLUDE_DIRS += ..
 
 CXXFLAGS += -O0 -g3
-CXXFLAGS += --std=c++17
+CXXFLAGS += --std=c++20
 CXXFLAGS += -fno-inline
 CXXFLAGS += -fmax-errors=5
 CXXFLAGS += -Wall -Wpedantic -Werror -Wno-unused-value -Wreturn-local-addr
