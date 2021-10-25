@@ -8,9 +8,11 @@
 
 TEST_GROUP(Core)  {};
 
+struct Nada {};
+
 TEST(Core, AddCallAt)
 {
-    rpc::Core<MockStream::Accessor, MockSmartPointer, MockRegistry> core;
+    rpc::Core<MockStream::Accessor, MockSmartPointer, MockRegistry, Nada> core;
     bool buildOk;
     MockStreamWriterFactory f1;
     auto call = core.buildCall<std::string>(f1, buildOk, 69, std::string("asdqwe"));
@@ -58,7 +60,7 @@ TEST(Core, AddCallAt)
 
 TEST(Core, Truncate)
 {
-    rpc::Core<MockStream::Accessor, MockSmartPointer, MockRegistry> core;
+    rpc::Core<MockStream::Accessor, MockSmartPointer, MockRegistry, Nada> core;
 
     bool done = false;
     CHECK(core.addCallAt<std::list<std::vector<char>>>(69, [&done](const rpc::MethodHandle &id, auto str)
@@ -93,7 +95,7 @@ TEST(Core, Truncate)
 
 TEST(Core, GenericInsert)
 {
-    rpc::Core<MockStream::Accessor, MockSmartPointer, MockRegistry> core;
+    rpc::Core<MockStream::Accessor, MockSmartPointer, MockRegistry, Nada> core;
 
     bool a = false;
     int b = 0;
