@@ -1,14 +1,15 @@
+#include "RpcCTStr.h"
 #include "RpcSerdes.h"
+#include "RpcStruct.h"
 #include "RpcStlMap.h"
 #include "RpcStlSet.h"
 #include "RpcStlList.h"
-#include "RpcStlTuple.h"
 #include "RpcStlArray.h"
-#include "RpcStreamReader.h"
+#include "RpcStlTuple.h"
+#include "RpcPlainArray.h"
 #include "RpcArrayWriter.h"
+#include "RpcStreamReader.h"
 #include "RpcCollectionGenerator.h"
-#include "RpcCTStr.h"
-#include "RpcStruct.h"
 
 #include "MockStream.h"
 
@@ -31,13 +32,31 @@ TEST_GROUP(SerDes), rpc::CallIdTestAccessor
         return stream;
     }
 
+    template<class C>
+    static inline auto containerize(C&& c) {
+    	return c;
+    }
+
+    template<class C, size_t n>
+    static inline auto containerize(C (&c)[n])
+    {
+    	std::array<C, n> ret;
+
+    	for(auto i = 0u; i < n; i ++)
+    	{
+    		ret[i] = c[i];
+    	}
+
+    	return ret;
+    }
+
     template<class... C>
     bool read(MockStream &stream, C&&... c)
     {
         bool done = false;
         auto b = stream.access();
-        bool deserOk = nullptr == rpc::deserialize<C...>(b, [&done, exp{std::make_tuple<C...>(std::forward<C>(c)...)}](auto&&... args){
-            CHECK(std::make_tuple(args...) == exp);
+        bool deserOk = nullptr == rpc::deserialize<C...>(b, [&done, exp{std::make_tuple(containerize(std::forward<C>(c))...)}](auto&&... args){
+            CHECK(std::make_tuple(containerize(args)...) == exp);
             done = true;
         });
 
@@ -488,10 +507,11 @@ TEST(SerDes, ExtraArgs)
 TEST(SerDes, CollectionGenerator)
 {
     unsigned short exp[] = {0xb16b, 0x00b5};
-    auto input = rpc::generateCollection(2, [&exp, i(0u)]() mutable
+    auto input = rpc::generateCollection(2, [&exp](auto remaining) mutable
 	{
-    	CHECK(i < sizeof(exp)/sizeof(exp[0]));
-    	return exp[i++];
+    	static constexpr auto n = sizeof(exp)/sizeof(exp[0]);
+    	CHECK(remaining < n);
+    	return exp[n - remaining - 1];
     });
 
     auto size = rpc::determineSize(input);
@@ -571,3 +591,50 @@ TEST(SerDes, NestedStructs)
 	});
 }
 
+TEST(SerDes, PlainArray)
+{
+	int a[] = {1, 3, 3, 7};
+    test(a);
+}
+
+struct StructWithArray
+{
+	int a[4];
+
+	inline bool operator ==(const StructWithArray& o) const {
+		return memcmp(a, o.a, sizeof(a)) == 0;
+	}
+};
+
+namespace rpc {
+template<> struct TypeInfo<StructWithArray>: StructTypeInfo<StructWithArray, StructMember<&StructWithArray::a> >{};
+}
+
+TEST(SerDes, StructWithArray)
+{
+    test(StructWithArray{{1, 3, 3, 7}});
+}
+
+struct StructWithBlock
+{
+	int *data;
+	size_t n;
+
+	inline bool operator ==(const StructWithBlock& o) const {
+		return n == o.n && memcmp(data, o.data, n * sizeof(data[0])) == 0;
+	}
+};
+
+namespace rpc {
+template<> struct TypeInfo<StructWithBlock>: StructTypeInfo<StructWithBlock, DataBlock<&StructWithBlock::data, &StructWithBlock::n> >{};
+}
+
+TEST(SerDes, StructWithBlock)
+{
+	static constexpr auto n = 5;
+	int d[n] = {1, 2, 3, 4, 5};
+
+    auto data(write(StructWithBlock{d, n}));
+    CHECK(read(data, std::tuple<std::vector<int>>{{d, d + n}}));
+
+}
