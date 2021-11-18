@@ -33,7 +33,8 @@ LIBS += gcov
 
 LD=$(CXX)
 
-COVROOT = ..
+COVROOT = ../..
+COVFLAGS := -e $(dir $(abspath $(lastword $(MAKEFILE_LIST)))).*
 
 include ../../cpp/mod.mk
 include pet/mod.mk

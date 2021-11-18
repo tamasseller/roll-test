@@ -1,15 +1,31 @@
-#include "RpcCTStr.h"
-#include "RpcSerdes.h"
-#include "RpcStruct.h"
-#include "RpcStlMap.h"
-#include "RpcStlSet.h"
-#include "RpcStlList.h"
-#include "RpcStlArray.h"
-#include "RpcStlTuple.h"
-#include "RpcPlainArray.h"
-#include "RpcArrayWriter.h"
-#include "RpcStreamReader.h"
-#include "RpcCollectionGenerator.h"
+#include "types/CallTypeInfo.h"
+#include "types/PrimitiveTypeInfo.h"
+#include "types/StdDequeTypeInfo.h"
+#include "types/StdForwardListTypeInfo.h"
+#include "types/StdListTypeInfo.h"
+#include "types/StdMapTypeInfo.h"
+#include "types/StdMultimapTypeInfo.h"
+#include "types/StdMultisetTypeInfo.h"
+#include "types/StdPairTypeInfo.h"
+#include "types/StdSetTypeInfo.h"
+#include "types/StdStringTypeInfo.h"
+#include "types/StdTupleTypeInfo.h"
+#include "types/StdUnorderedMapTypeInfo.h"
+#include "types/StdUnorderedMultimapTypeInfo.h"
+#include "types/StdUnorderedMultisetTypeInfo.h"
+#include "types/StdUnorderedSetTypeInfo.h"
+#include "types/StdVectorTypeInfo.h"
+#include "types/ArrayTypeInfo.h"
+#include "types/CStringTypeInfo.h"
+#include "types/StructTypeInfo.h"
+#include "types/DereferenceTypeInfo.h"
+
+#include "support/StreamReader.h"
+#include "support/ArrayWriter.h"
+#include "support/CollectionGenerator.h"
+#include "support/ArrayWrapper.h"
+
+#include "base/Serdes.h"
 
 #include "MockStream.h"
 
@@ -217,6 +233,22 @@ TEST(SerDes, LongStrings)
     // Takes too long: test(std::string(128*128*128*128, '.'));
 }
 
+TEST(SerDes, ExtraArgs)
+{
+    auto data = write(std::string("normal"));
+    auto b = data.access();
+    bool done = false;
+
+    CHECK(nullptr == rpc::deserialize<std::string>(b, [&done](auto extra, auto normal)
+    {
+        CHECK(normal == "normal");
+        CHECK(extra == "extra");
+        done = true;
+    }, std::string("extra")));
+
+    CHECK(done);
+}
+
 TEST(SerDes, Truncate) 
 {
     for(int i=0; ; i++)
@@ -233,6 +265,23 @@ TEST(SerDes, Truncate)
     }
 }
 
+TEST(SerDes, TruncateArray)
+{
+    for(int i=0; ; i++)
+    {
+        char str[] = "abc";
+        auto data = write(str);
+
+        if(!data.truncateAt(i))
+        {
+            CHECK(read(data, str));
+            break;
+        }
+
+        CHECK(!read(data, str));
+    }
+}
+
 TEST(SerDes, NoSpace)
 {
     auto data = std::string("panzerkampfwagen");
@@ -245,9 +294,42 @@ TEST(SerDes, NoSpace)
         bool sok = rpc::serialize(a, data);
 
         if(i < s)
+        {
+        	CHECK(!sok);
+        }
+        else
+        {
+            CHECK(sok);
+            CHECK(read(stream, data));
+        }
+    }
+}
+
+TEST(SerDes, NoSpaceArray)
+{
+    char data[] = "panzerkampfwagen";
+    auto s = rpc::determineSize(data);
+
+    for(auto i = 0u; i <= s; i++)
+    {
+        MockStream stream(i);
+        auto a = stream.access();
+        bool sok = rpc::serialize(a, data);
+
+        if(i < s)
             CHECK(!sok);
         else
-            CHECK(sok);
+        {
+            if(i < s)
+            {
+            	CHECK(!sok);
+            }
+            else
+            {
+                CHECK(sok);
+                CHECK(read(stream, data));
+            }
+        }
     }
 }
 
@@ -280,6 +362,115 @@ TEST(SerDes, VarUint4)
         CHECK(r == n);
     }
 }
+
+TEST(SerDes, PlainArray)
+{
+	int a[] = {1, 3, 3, 7};
+    test(a);
+}
+
+TEST(SerDes, CTStr)
+{
+    static constexpr const char str[] = "indistinguishable";
+    static constexpr auto ctstr = rpc::CTStr<sizeof(str)-1>(str);
+    auto data = write(rpc::ArrayWriter<char>((const char*)ctstr, ctstr.strLength));
+    CHECK(read(data, std::string(str)));
+}
+
+struct StructTest
+{
+	int n;
+	std::string str;
+
+	inline bool operator ==(const StructTest& o) const {
+		return n == o.n && str == o.str;
+	}
+};
+
+namespace rpc {
+
+template<> struct TypeInfo<StructTest>: StructTypeInfo<StructTest,
+		StructMember<&StructTest::n>,
+		StructMember<&StructTest::str>
+	>{};
+}
+
+TEST(SerDes, Struct)
+{
+    test(StructTest{1337, "leet"});
+}
+
+struct NestedStructTest
+{
+	StructTest sa, sb;
+	std::string explanation;
+
+	inline bool operator ==(const NestedStructTest& o) const {
+		return sa == o.sa && sb == o.sb && explanation == o.explanation;
+	}
+};
+
+namespace rpc {
+
+template<> struct TypeInfo<NestedStructTest>: StructTypeInfo<NestedStructTest,
+		StructMember<&NestedStructTest::sa>,
+		StructMember<&NestedStructTest::sb>,
+		StructMember<&NestedStructTest::explanation>
+	>{};
+}
+
+TEST(SerDes, NestedStructs)
+{
+    test(NestedStructTest
+	{
+		{0x1337, "l33t"},
+		{1337, "1ee7"},
+		"foobar"
+	});
+}
+
+struct StructWithArray
+{
+	int a[4];
+
+	inline bool operator ==(const StructWithArray& o) const {
+		return memcmp(a, o.a, sizeof(a)) == 0;
+	}
+};
+
+namespace rpc {
+template<> struct TypeInfo<StructWithArray>: StructTypeInfo<StructWithArray, StructMember<&StructWithArray::a> >{};
+}
+
+TEST(SerDes, StructWithArray)
+{
+    test(StructWithArray{{1, 3, 3, 7}});
+}
+
+struct StructWithBlock
+{
+	int *data;
+	size_t n;
+
+	inline bool operator ==(const StructWithBlock& o) const {
+		return n == o.n && memcmp(data, o.data, n * sizeof(data[0])) == 0;
+	}
+};
+
+namespace rpc {
+template<> struct TypeInfo<StructWithBlock>: StructTypeInfo<StructWithBlock, DataBlock<&StructWithBlock::data, &StructWithBlock::n> >{};
+}
+
+TEST(SerDes, StructWithBlock)
+{
+	static constexpr auto n = 5;
+	int d[n] = {1, 2, 3, 4, 5};
+
+    auto data(write(StructWithBlock{d, n}));
+    CHECK(read(data, std::tuple<std::vector<int>>{{d, d + n}}));
+
+}
+
 
 TEST(SerDes, SimpleStreamReader)
 {
@@ -453,13 +644,6 @@ TEST(SerDes, ArrayWriter)
     }
 }
 
-TEST(SerDes, CTStr)
-{
-    static constexpr const char str[] = "indistinguishable";
-    static constexpr auto ctstr = rpc::CTStr<sizeof(str)-1>(str);
-    auto data = write(rpc::ArrayWriter<char>((const char*)ctstr, ctstr.strLength));
-    CHECK(read(data, std::string(str)));
-}
 
 TEST(SerDes, StreamOverread)
 {
@@ -488,21 +672,6 @@ TEST(SerDes, StreamOverread)
     }));
 }
 
-TEST(SerDes, ExtraArgs)
-{
-    auto data = write(std::string("normal"));
-    auto b = data.access();
-    bool done = false;
-
-    CHECK(nullptr == rpc::deserialize<std::string>(b, [&done](auto extra, auto normal)
-    {
-        CHECK(normal == "normal");
-        CHECK(extra == "extra");
-        done = true;
-    }, std::string("extra")));
-
-    CHECK(done);
-}
 
 TEST(SerDes, CollectionGenerator)
 {
@@ -539,102 +708,34 @@ TEST(SerDes, CollectionGenerator)
 	CHECK(done);
 }
 
-struct StructTest
+TEST(SerDes, ArrayWrapper)
 {
-	int n;
-	std::string str;
+    unsigned short exp[] = {0xb16b, 0x00b5};
+    rpc::ArrayWrapper x(exp);
+    rpc::ArrayWrapper<unsigned short, 5> input(x);
 
-	inline bool operator ==(const StructTest& o) const {
-		return n == o.n && str == o.str;
-	}
-};
+    auto size = rpc::determineSize(input);
+    for(auto i = 0u; i < size; i++)
+    {
+        MockStream stream(i);
+        auto a = stream.access();
+        CHECK(!rpc::serialize(a, input));
+    }
 
-namespace rpc {
+    bool done = false;
+	auto data = write(123, input, 456);
+	auto b = data.access();
+	auto res = rpc::deserialize<int, std::vector<unsigned short>, int>(b,
+        [exp, &done](int a, const auto& data, int b)
+        {
+			CHECK(a == 123);
+            CHECK(data == std::vector<unsigned short>(exp, exp + sizeof(exp)/sizeof(exp[0])));
+            CHECK(b == 456);
+            done = true;
+        }
+	);
 
-template<> struct TypeInfo<StructTest>: StructTypeInfo<StructTest,
-		StructMember<&StructTest::n>,
-		StructMember<&StructTest::str>
-	>{};
+	CHECK(res == nullptr);
+	CHECK(done);
 }
 
-TEST(SerDes, Struct)
-{
-    test(StructTest{1337, "leet"});
-}
-
-struct NestedStructTest
-{
-	StructTest sa, sb;
-	std::string explanation;
-
-	inline bool operator ==(const NestedStructTest& o) const {
-		return sa == o.sa && sb == o.sb && explanation == o.explanation;
-	}
-};
-
-namespace rpc {
-
-template<> struct TypeInfo<NestedStructTest>: StructTypeInfo<NestedStructTest,
-		StructMember<&NestedStructTest::sa>,
-		StructMember<&NestedStructTest::sb>,
-		StructMember<&NestedStructTest::explanation>
-	>{};
-}
-
-TEST(SerDes, NestedStructs)
-{
-    test(NestedStructTest
-	{
-		{0x1337, "l33t"},
-		{1337, "1ee7"},
-		"foobar"
-	});
-}
-
-TEST(SerDes, PlainArray)
-{
-	int a[] = {1, 3, 3, 7};
-    test(a);
-}
-
-struct StructWithArray
-{
-	int a[4];
-
-	inline bool operator ==(const StructWithArray& o) const {
-		return memcmp(a, o.a, sizeof(a)) == 0;
-	}
-};
-
-namespace rpc {
-template<> struct TypeInfo<StructWithArray>: StructTypeInfo<StructWithArray, StructMember<&StructWithArray::a> >{};
-}
-
-TEST(SerDes, StructWithArray)
-{
-    test(StructWithArray{{1, 3, 3, 7}});
-}
-
-struct StructWithBlock
-{
-	int *data;
-	size_t n;
-
-	inline bool operator ==(const StructWithBlock& o) const {
-		return n == o.n && memcmp(data, o.data, n * sizeof(data[0])) == 0;
-	}
-};
-
-namespace rpc {
-template<> struct TypeInfo<StructWithBlock>: StructTypeInfo<StructWithBlock, DataBlock<&StructWithBlock::data, &StructWithBlock::n> >{};
-}
-
-TEST(SerDes, StructWithBlock)
-{
-	static constexpr auto n = 5;
-	int d[n] = {1, 2, 3, 4, 5};
-
-    auto data(write(StructWithBlock{d, n}));
-    CHECK(read(data, std::tuple<std::vector<int>>{{d, d + n}}));
-
-}

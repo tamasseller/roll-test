@@ -1,4 +1,4 @@
-#include "RpcCTStr.h"
+#include "common/CTStr.h"
 
 #include "1test/Test.h"
 

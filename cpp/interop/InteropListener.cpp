@@ -1,11 +1,14 @@
 #include "InteropListener.h"
 
-#include "RpcStlArray.h"
-#include "RpcStlList.h"
-#include "RpcStlAdapters.h"
-#include "RpcFdStreamAdapter.h"
+#include "types/CallTypeInfo.h"
+#include "types/StdListTypeInfo.h"
+#include "types/PrimitiveTypeInfo.h"
+#include "types/StdStringTypeInfo.h"
+#include "types/StdVectorTypeInfo.h"
 
 #include "Contract.gen.h"
+
+#include "platform/FdStreamAdapter.h"
 
 #include "Tcp.h"
 #include "Common.h"

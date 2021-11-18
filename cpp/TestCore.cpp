@@ -1,6 +1,10 @@
-#include "RpcCore.h"
-#include "RpcStlArray.h"
-#include "RpcStlList.h"
+#include "types/PrimitiveTypeInfo.h"
+#include "types/StdStringTypeInfo.h"
+#include "types/StdVectorTypeInfo.h"
+#include "types/StdListTypeInfo.h"
+#include "types/CallTypeInfo.h"
+
+#include "base/RpcCore.h"
 
 #include "MockCoreAdapters.h"
 

@@ -1,10 +1,31 @@
-#include "RpcSerdes.h"
-#include "RpcStlMap.h"
-#include "RpcStlSet.h"
-#include "RpcStlList.h"
-#include "RpcStlTuple.h"
-#include "RpcStlArray.h"
-#include "RpcCTStr.h"
+#include "types/CallTypeInfo.h"
+#include "types/PrimitiveTypeInfo.h"
+#include "types/StdDequeTypeInfo.h"
+#include "types/StdForwardListTypeInfo.h"
+#include "types/StdListTypeInfo.h"
+#include "types/StdMapTypeInfo.h"
+#include "types/StdMultimapTypeInfo.h"
+#include "types/StdMultisetTypeInfo.h"
+#include "types/StdPairTypeInfo.h"
+#include "types/StdSetTypeInfo.h"
+#include "types/StdStringTypeInfo.h"
+#include "types/StdTupleTypeInfo.h"
+#include "types/StdUnorderedMapTypeInfo.h"
+#include "types/StdUnorderedMultimapTypeInfo.h"
+#include "types/StdUnorderedMultisetTypeInfo.h"
+#include "types/StdUnorderedSetTypeInfo.h"
+#include "types/StdVectorTypeInfo.h"
+#include "types/ArrayTypeInfo.h"
+#include "types/CStringTypeInfo.h"
+#include "types/StructTypeInfo.h"
+#include "types/DereferenceTypeInfo.h"
+
+#include "support/StreamReader.h"
+#include "support/ArrayWriter.h"
+#include "support/CollectionGenerator.h"
+#include "support/ArrayWrapper.h"
+
+#include "base/SignatureGenerator.h"
 
 #include "1test/Test.h"
 
@@ -167,3 +188,82 @@ TEST(SignatureGenerator, StringListPlaceholder) {
     CHECK(sgn<rpc::CollectionPlaceholder<rpc::CollectionPlaceholder<char>>>() == "([[i1]])");
 }
 
+TEST(SignatureGenerator, CharArray)  {
+    CHECK(sgn<char[3]>() == "([i1])");
+}
+
+TEST(SignatureGenerator, Cstring)
+{
+	auto str = "str";
+    CHECK(sgn<decltype(str)>() == "([i1])");
+}
+
+struct TestStruct{ int a; short b; char c; };
+
+namespace rpc {
+	template<> struct TypeInfo<TestStruct>: StructTypeInfo<TestStruct,
+		StructMember<&TestStruct::a>,
+		StructMember<&TestStruct::b>,
+		StructMember<&TestStruct::c>
+	> {};
+}
+
+TEST(SignatureGenerator, Struct)
+{
+    CHECK(sgn<TestStruct>() == "({i4,i2,i1})");
+}
+
+struct TestStruct2{ int n; const char *data; };
+
+namespace rpc {
+	template<> struct TypeInfo<TestStruct2>: StructTypeInfo<TestStruct2,
+		DataBlock<&TestStruct2::data, &TestStruct2::n>
+	> {};
+}
+
+TEST(SignatureGenerator, StructWithDataBlock)
+{
+    CHECK(sgn<TestStruct2>() == "({[i1]})");
+}
+
+
+struct TestStruct3{ int n; TestStruct2 *data; };
+
+namespace rpc {
+	template<> struct TypeInfo<TestStruct3*>: DereferenceTypeInfo<StructTypeInfo<TestStruct3,
+		DataBlock<&TestStruct3::data, &TestStruct3::n>
+	>> {};
+}
+
+TEST(SignatureGenerator, DereferencedNestedDataBlock)
+{
+    CHECK(sgn<TestStruct3*>() == "({[{[i1]}]})");
+}
+
+TEST(SignatureGenerator, StreamReader)
+{
+	struct Dummy {};
+	CHECK(sgn<rpc::StreamReader<char, Dummy>>() == "([i1])");
+}
+
+TEST(SignatureGenerator, ArrayWriter) {
+	CHECK(sgn<rpc::ArrayWriter<char>>() == "([i1])");
+}
+
+TEST(SignatureGenerator, CollectionGenerator)
+{
+	auto x = rpc::generateCollection(0, [](auto){return '\0';});
+	CHECK(sgn<decltype(x)>() == "([i1])");
+}
+
+TEST(SignatureGenerator, ArrayWrapperSingle)
+{
+	auto x = rpc::ArrayWrapper('\0');
+	CHECK(sgn<decltype(x)>() == "([i1])");
+}
+
+TEST(SignatureGenerator, ArrayWrapperMulti)
+{
+	auto x = rpc::ArrayWrapper("asd");
+	CHECK(sgn<decltype(x)>() == "([i1])");
+}

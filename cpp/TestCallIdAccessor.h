@@ -1,7 +1,7 @@
 #ifndef _TESTCALLIDACCESSOR_H_
 #define _TESTCALLIDACCESSOR_H_
 
-#include "RpcCall.h"
+#include "base/Call.h"
 
 namespace rpc
 {

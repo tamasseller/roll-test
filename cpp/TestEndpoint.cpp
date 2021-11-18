@@ -1,17 +1,15 @@
-#include "RpcEndpoint.h"
-#include "RpcCTStr.h"
-#include "RpcStlArray.h"
-#include "RpcStlMap.h"
-#include "RpcStlTuple.h"
-#include "RpcSymbol.h"
-#include "RpcPlainArray.h"
+#include "types/CallTypeInfo.h"
+#include "types/ArrayTypeInfo.h"
+#include "types/PrimitiveTypeInfo.h"
+#include "types/StdStringTypeInfo.h"
+
+#include "base/RpcEndpoint.h"
 
 #include "MockCoreAdapters.h"
 #include "TestCallIdAccessor.h"
 
 #include "1test/Test.h"
 
-#include <map>
 #include <list>
 #include <sstream>
 
