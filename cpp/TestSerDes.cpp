@@ -71,7 +71,7 @@ TEST_GROUP(SerDes), rpc::CallIdTestAccessor
     {
         bool done = false;
         auto b = stream.access();
-        bool deserOk = nullptr == rpc::deserialize<C...>(b, [&done, exp{std::make_tuple(containerize(std::forward<C>(c))...)}](auto&&... args){
+        bool deserOk = rpc::Errors::success == rpc::deserialize<C...>(b, [&done, exp{std::make_tuple(containerize(std::forward<C>(c))...)}](auto&&... args){
             CHECK(std::make_tuple(containerize(args)...) == exp);
             done = true;
         });
@@ -239,7 +239,7 @@ TEST(SerDes, ExtraArgs)
     auto b = data.access();
     bool done = false;
 
-    CHECK(nullptr == rpc::deserialize<std::string>(b, [&done](auto extra, auto normal)
+    CHECK(rpc::Errors::success == rpc::deserialize<std::string>(b, [&done](auto extra, auto normal)
     {
         CHECK(normal == "normal");
         CHECK(extra == "extra");
@@ -476,7 +476,7 @@ TEST(SerDes, SimpleStreamReader)
 {
     auto data = write(std::string("streaming"));
     auto b = data.access();
-    CHECK(nullptr == rpc::deserialize<rpc::StreamReader<char, MockStream::Accessor>>(b, [](auto&& reader)
+    CHECK(rpc::Errors::success == rpc::deserialize<rpc::StreamReader<char, MockStream::Accessor>>(b, [](auto&& reader)
     {
         std::stringstream ss;
 
@@ -493,7 +493,7 @@ TEST(SerDes, StreamCall)
     auto data = write(exp, 123);
     auto b = data.access();
 
-    CHECK(nullptr == rpc::deserialize<rpc::StreamReader<rpc::Call<>, MockStream::Accessor>, int>(b, [&exp](auto&& reader, int n)
+    CHECK(rpc::Errors::success == rpc::deserialize<rpc::StreamReader<rpc::Call<>, MockStream::Accessor>, int>(b, [&exp](auto&& reader, int n)
     {
         auto e = exp.begin();
 
@@ -510,7 +510,7 @@ TEST(SerDes, StreamCollection)
     auto data = write(exp, short(321));
     auto b = data.access();
 
-    CHECK(nullptr == rpc::deserialize<rpc::StreamReader<std::string, MockStream::Accessor>, short>(b, [&exp](auto&& reader, short n) 
+    CHECK(rpc::Errors::success == rpc::deserialize<rpc::StreamReader<std::string, MockStream::Accessor>, short>(b, [&exp](auto&& reader, short n)
     {
         auto e = exp.begin();
         for(const auto &x: reader)
@@ -526,7 +526,7 @@ TEST(SerDes, StreamTuple)
     auto data = write(exp, 'x');
     auto b = data.access();
 
-    CHECK(nullptr == rpc::deserialize<rpc::StreamReader<std::tuple<char, int>, MockStream::Accessor>, char> (b,
+    CHECK(rpc::Errors::success == rpc::deserialize<rpc::StreamReader<std::tuple<char, int>, MockStream::Accessor>, char> (b,
     [&exp](auto&& reader, char c) 
     {
         auto e = exp.begin();
@@ -544,7 +544,7 @@ TEST(SerDes, StreamStream)
     auto b = data.access();
 
     bool done = false;
-    CHECK(nullptr == rpc::deserialize<rpc::StreamReader<rpc::StreamReader<char, MockStream::Accessor>, MockStream::Accessor>, long> (b,
+    CHECK(rpc::Errors::success == rpc::deserialize<rpc::StreamReader<rpc::StreamReader<char, MockStream::Accessor>, MockStream::Accessor>, long> (b,
     [&done, &exp](auto&& reader, long l) 
     {
         auto e = exp.begin();
@@ -578,7 +578,7 @@ TEST(SerDes, StreamClobber)
         auto b = data.access();
         bool done = false;
 
-        bool executed = nullptr == rpc::deserialize<rpc::StreamReader<std::pair<std::string, rpc::Call<>>, MockStream::Accessor>, bool>(b, 
+        bool executed = rpc::Errors::success == rpc::deserialize<rpc::StreamReader<std::pair<std::string, rpc::Call<>>, MockStream::Accessor>, bool>(b,
         [&exp, &done, i](auto&& reader, bool f)
         {
             auto elements = exp;
@@ -626,7 +626,7 @@ TEST(SerDes, ArrayWriter)
         auto b = data.access();
         bool done = false;
 
-        bool executed = nullptr == rpc::deserialize<std::vector<unsigned short>, int>(b, 
+        bool executed = rpc::Errors::success == rpc::deserialize<std::vector<unsigned short>, int>(b,
         [exp, i, &done](const auto& data, int j)
         {
             CHECK(data == std::vector<unsigned short>(exp, exp + sizeof(exp)/sizeof(exp[0])));
@@ -649,7 +649,7 @@ TEST(SerDes, StreamOverread)
 {
     auto data = write(std::string("frob"));
     auto b = data.access();
-    CHECK(nullptr == rpc::deserialize<rpc::StreamReader<char, MockStream::Accessor>>(b, [](auto&& reader)
+    CHECK(rpc::Errors::success == rpc::deserialize<rpc::StreamReader<char, MockStream::Accessor>>(b, [](auto&& reader)
     {
         std::stringstream ss;
 
@@ -704,7 +704,7 @@ TEST(SerDes, CollectionGenerator)
         }
 	);
 
-	CHECK(res == nullptr);
+	CHECK(res == rpc::Errors::success);
 	CHECK(done);
 }
 
@@ -735,7 +735,6 @@ TEST(SerDes, ArrayWrapper)
         }
 	);
 
-	CHECK(res == nullptr);
+	CHECK(res == rpc::Errors::success);
 	CHECK(done);
 }
-

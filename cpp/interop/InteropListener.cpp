@@ -136,7 +136,7 @@ struct Service: InteropTestContract::ServerProxy<Service, rpc::StlEndpoint<rpc::
 void runInteropListener(int sock)
 {
 	auto uut = std::make_shared<Service>(sock, sock);
-	auto t = startServiceThread(uut);
+	auto t = startLooper(uut);
 
 	uut->wait();
 

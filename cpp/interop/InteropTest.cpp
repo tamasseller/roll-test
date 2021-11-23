@@ -121,11 +121,10 @@ static inline void runUnknownMethodLookupTest(std::shared_ptr<Client> uut)
 	std::promise<bool> p;
 	auto ret = p.get_future();
 
-	const char* err = uut->lookup(nope, [p{std::move(p)}](auto&, bool done, auto) mutable { p.set_value(done); });
-	assert(err == nullptr);
+	auto err = uut->lookup(nope, [p{std::move(p)}](auto&, bool done, auto) mutable { p.set_value(done); });
+	assert(!err);
 
 	bool failed = ret.get() == false;
-
     assert(failed);
 }
 
@@ -201,7 +200,6 @@ static inline void runStreamGeneratorTest(std::shared_ptr<Client> uut)
     v->waitAndClose(uut, 1);
 }
 
-
 static inline void runRejectionTests(std::shared_ptr<Client> uut)
 {
 	auto a = std::make_shared<CloseMeSession>();
@@ -221,7 +219,7 @@ static inline void runRejectionTests(std::shared_ptr<Client> uut)
 void runInteropTests(int sock)
 {
 	auto uut = std::make_shared<Client>(sock, sock);
-	auto t = startServiceThread(uut);
+	auto t = startLooper(uut);
 	uut->unlock(false);
 
     runUnknownMethodLookupTest(uut);

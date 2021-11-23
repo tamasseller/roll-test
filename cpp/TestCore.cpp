@@ -25,7 +25,7 @@ TEST(Core, AddCallAt)
     bool done = false;
 
     auto a = call.access();
-    CHECK(core.execute(a) == rpc::Errors::wrongMethodRequest);
+    CHECK(core.execute(a) == rpc::Errors::undefinedMethodCalled);
     CHECK(!done);
 
     CHECK(core.addCallAt<std::string>(69, [&done](const rpc::MethodHandle &id, std::string str)
@@ -37,26 +37,26 @@ TEST(Core, AddCallAt)
     CHECK(!done);
 
     auto b = call.access();
-    CHECK(nullptr == core.execute(b));
+    CHECK(rpc::Errors::success == core.execute(b));
     CHECK(done);
 
     done = false;
     auto c = call.access();
-    CHECK(nullptr == core.execute(c));
+    CHECK(rpc::Errors::success == core.execute(c));
     CHECK(done);
 
     CHECK(!core.addCallAt<std::string>(69, [&done](const rpc::MethodHandle &id, std::string str) { CHECK(false); }));
 
     done = false;
     auto d = call.access();
-    CHECK(nullptr == core.execute(d));
+    CHECK(rpc::Errors::success == core.execute(d));
     CHECK(done);
 
     CHECK(core.removeCall(69));
 
     done = false;
     auto e = call.access();
-    CHECK(core.execute(e) == rpc::Errors::wrongMethodRequest);
+    CHECK(core.execute(e) == rpc::Errors::undefinedMethodCalled);
     CHECK(!done);
 
     CHECK(!core.removeCall(69));
@@ -89,7 +89,7 @@ TEST(Core, Truncate)
         else
         {
             auto a = call.access();
-            CHECK(nullptr == core.execute(a));
+            CHECK(rpc::Errors::success == core.execute(a));
             break;
         }
     }
@@ -114,7 +114,7 @@ TEST(Core, GenericInsert)
     CHECK(build1ok);
 
     auto r1 = call1.access();
-    CHECK(nullptr == core.execute(r1));
+    CHECK(rpc::Errors::success == core.execute(r1));
     CHECK(a == true);
 
     bool build2ok;
@@ -122,6 +122,6 @@ TEST(Core, GenericInsert)
     auto call2 = core.buildCall<int, int>(f2, build2ok, id2, 1, 2);
     CHECK(build2ok);
     auto r2 = call2.access();
-    CHECK(nullptr == core.execute(r2));
+    CHECK(rpc::Errors::success == core.execute(r2));
     CHECK(b == 3);
 }
