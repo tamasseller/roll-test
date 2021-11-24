@@ -36,6 +36,8 @@ static inline auto startLooper(std::shared_ptr<Target> uut)
 
             return true;
         }));
+
+        uut->connectionClosed();
     });
 }
 

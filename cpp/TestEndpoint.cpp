@@ -2,6 +2,8 @@
 #include "types/ArrayTypeInfo.h"
 #include "types/PrimitiveTypeInfo.h"
 #include "types/StdStringTypeInfo.h"
+#include "types/StdVectorTypeInfo.h"
+#include "types/StdListTypeInfo.h"
 
 #include "base/RpcEndpoint.h"
 
@@ -17,6 +19,7 @@ static constexpr const char hello[] = {'h', 'e', 'l', 'l', 'o'};
 
 struct Uut:
 		rpc::Endpoint<
+			Uut,
 			MockSmartPointer,
 			MockRegistry,
 			MockStreamWriterFactory::Accessor,
@@ -46,9 +49,8 @@ struct Uut:
 
 TEST_GROUP(Endpoint), rpc::CallIdTestAccessor
 {
-    static inline void executeLoopback(Uut::Endpoint& ep, rpc::Errors exp = rpc::Errors::success)
+    static inline void executeLoopback(Uut& uut, rpc::Errors exp = rpc::Errors::success)
     {
-        auto &uut = (Uut&)ep;
         auto msg = rpc::move(uut.sent.front());
         uut.sent.pop_front();
         auto loopback = msg.access();
@@ -80,6 +82,58 @@ TEST(Endpoint, NotHello)
     CHECK(rpc::Errors::success == uut.uninstall(cb));
     CHECK(uut.uninstall(cb) == rpc::Errors::methodNotFound);
 }
+
+
+TEST(Endpoint, AlmostHello)
+{
+    Uut uut;
+    CHECK(uut.init());
+
+    rpc::Call<> cb = uut.install([](Uut::Endpoint& uut, const rpc::MethodHandle &h) { FAIL("Should not be called."); });
+
+    CHECK(rpc::Errors::success == uut.call(cb));
+    CHECK(rpc::Errors::success == uut.uninstall(cb));
+
+    executeLoopback(uut, rpc::Errors::undefinedMethodCalled);
+}
+
+
+TEST(Endpoint, Truncate)
+{
+    Uut uut;
+    CHECK(uut.init());
+
+    bool done = false;
+    auto cb = uut.install([&done](Uut::Endpoint& uut, const rpc::MethodHandle &h, const std::list<std::vector<char>> &str)
+	{
+        CHECK(str == std::list<std::vector<char>>{{'a', 's', 'd'}, {'q', 'w', 'e'}});
+        CHECK(!done);
+        done = true;
+    });
+
+    for(int i = 0; ; i++)
+    {
+        CHECK(rpc::Errors::success == uut.call(cb, std::vector<std::string>{"asd", "qwe"}));
+
+        auto call = rpc::move(uut.sent.front());
+        uut.sent.pop_front();
+
+        if(call.truncateAt(i))
+        {
+            auto a = call.access();
+            CHECK(rpc::Errors::messageFormatError == uut.process(a));
+        }
+        else
+        {
+            auto a = call.access();
+            CHECK(rpc::Errors::success == uut.process(a));
+            break;
+        }
+    }
+
+    CHECK(done);
+}
+
 
 TEST(Endpoint, ProvideRequire)
 {
@@ -163,12 +217,12 @@ TEST(Endpoint, ExecuteRemoteWithCallback)
     }));
 
     bool done = false;
-    CHECK(rpc::Errors::success == uut.lookup(sym, [&done](Uut::Endpoint& uut, bool lookupSucceded, auto sayHello)
+    CHECK(rpc::Errors::success == uut.lookup(sym, [&done](Uut& uut, bool lookupSucceded, auto sayHello)
     {
         CHECK(lookupSucceded);
 
         int n = 0;
-        rpc::Call<std::string> cb = uut.install([&n](Uut::Endpoint &uut, const rpc::MethodHandle &id, const std::string &str)
+        rpc::Call<std::string> cb = uut.install([&n](Uut &uut, const rpc::MethodHandle &id, const std::string &str)
 		{
             CHECK(str == "hello");
             n++;
@@ -296,4 +350,16 @@ TEST(Endpoint, FailToCreateLookupResponse)
     executeLoopback(uut, rpc::Errors::couldNotCreateMessage);
 
     CHECK(!done);
+}
+
+TEST(Endpoint, SimulatedCall)
+{
+    Uut uut;
+    CHECK(uut.init());
+
+	bool a = false;
+	rpc::Call<> id1 = uut.install([&a](Uut &uut, const rpc::MethodHandle &id) { a = true; });
+	CHECK(rpc::Errors::success == uut.simulateCall(id1));
+
+	CHECK(a);
 }

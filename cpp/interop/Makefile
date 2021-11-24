@@ -21,8 +21,12 @@ CXXFLAGS +=
 LD=$(CXX)
 
 LIBS += pthread
+CXXFLAGS += -rdynamic
+CXXFLAGS += --coverage
+LDFLAGS += -rdynamic
+LIBS += gcov 
 
-COVROOT = ..
+COVROOT = ../../..
 
 %.cpp: $(abspath $(GENDIR)/Contract.gen.h) ;
 

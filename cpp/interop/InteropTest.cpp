@@ -16,7 +16,9 @@
 #include <random>
 #include <condition_variable>
 
-using Client = InteropTestContract::ClientProxy<rpc::FdStreamAdapter>;
+struct Client: InteropTestContract::ClientProxy<rpc::StlEndpoint<Client, rpc::FdStreamAdapter>> {
+	using ClientProxy::ClientProxy;
+};
 
 struct ClientStream: InteropTestStreamClientSession<ClientStream>
 {

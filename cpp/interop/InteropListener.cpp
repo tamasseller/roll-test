@@ -6,14 +6,16 @@
 #include "types/StdStringTypeInfo.h"
 #include "types/StdVectorTypeInfo.h"
 
-#include "Contract.gen.h"
-
 #include "platform/FdStreamAdapter.h"
+
+#include "Contract.gen.h"
 
 #include "Tcp.h"
 #include "Common.h"
 
-struct Service: InteropTestContract::ServerProxy<Service, rpc::StlEndpoint<rpc::FdStreamAdapter>>
+#include <condition_variable>
+
+struct Service: InteropTestContract::ServerProxy<Service, rpc::StlEndpoint<Service, rpc::FdStreamAdapter>>
 {
 	using Service::ServerProxy::ServerProxy;
 	std::mutex m;
