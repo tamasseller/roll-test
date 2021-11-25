@@ -16,7 +16,7 @@
 #include <random>
 #include <condition_variable>
 
-struct Client: InteropTestContract::ClientProxy<rpc::StlEndpoint<Client, rpc::FdStreamAdapter>> {
+struct Client: InteropTestContract::ClientProxy<rpc::StlEndpoint<rpc::FdStreamAdapter>> {
 	using ClientProxy::ClientProxy;
 };
 
@@ -123,7 +123,7 @@ static inline void runUnknownMethodLookupTest(std::shared_ptr<Client> uut)
 	std::promise<bool> p;
 	auto ret = p.get_future();
 
-	auto err = uut->lookup(nope, [p{std::move(p)}](auto&, bool done, auto) mutable { p.set_value(done); });
+	auto err = uut->lookup(nope, [p{std::move(p)}](Client&, bool done, typename decltype(nope)::CallType) mutable { p.set_value(done); });
 	assert(!err);
 
 	bool failed = ret.get() == false;

@@ -15,7 +15,7 @@
 
 #include <condition_variable>
 
-struct Service: InteropTestContract::ServerProxy<Service, rpc::StlEndpoint<Service, rpc::FdStreamAdapter>>
+struct Service: InteropTestContract::ServerProxy<Service, rpc::StlEndpoint<rpc::FdStreamAdapter>>
 {
 	using Service::ServerProxy::ServerProxy;
 	std::mutex m;
